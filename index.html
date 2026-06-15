@@ -451,6 +451,13 @@ function toggleOpen(id) {
 
 function pickRandomObjective() {
 
+  <div id="remainingCount" style="
+  margin-top:10px;
+  font-weight:bold;
+  color:#243b55;
+">
+</div>
+  
   const mode = document.getElementById("randomMode").value;
 
   let candidates = [];
@@ -588,6 +595,10 @@ function updateProgress() {
   const bar = document.getElementById("progressBar");
   bar.style.width = percent + "%";
   bar.textContent = percent + "%";
+  const remaining = total - done;
+
+document.getElementById("remainingCount").textContent =
+  `${remaining} sous-objectifs non complétés disponibles`;
 }
 
 window.signup = signup;
