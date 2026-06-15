@@ -33,6 +33,7 @@
       font-size: 16px;
       padding: 8px;
       margin: 6px 0;
+      max-width: 100%;
     }
 
     button {
@@ -125,14 +126,21 @@
 </header>
 
 <main>
-  <label for="competenceFilter">Filtrer par compétence :</label><br>
+  <label for="competenceFilter">Choisir une compétence :</label><br>
   <select id="competenceFilter">
     <option value="">Toutes les compétences</option>
   </select>
 
   <br><br>
 
-  <button onclick="pickRandomObjective()">🎲 Choisir un objectif au hasard</button>
+  <label for="objectiveFilter">Choisir un objectif :</label><br>
+  <select id="objectiveFilter">
+    <option value="">Tous les objectifs</option>
+  </select>
+
+  <br><br>
+
+  <button onclick="pickRandomObjective()">🎲 Choisir au hasard</button>
 
   <section id="randomSection"></section>
 
@@ -161,6 +169,7 @@ async function loadData() {
       rawRows = results.data;
       buildObjectives();
       fillCompetenceFilter();
+      fillObjectiveFilter();
       render();
     }
   });
@@ -169,7 +178,7 @@ async function loadData() {
 function buildObjectives() {
   const map = {};
 
-  rawRows.forEach((row, index) => {
+  rawRows.forEach(row => {
     const competence = clean(row["Compétence"] || row["Competence"]);
     const objectif = clean(row["Objectif"]);
     const sousObjectif = clean(row["Sous-objectif"] || row["Sous objectif"] || row["SousObjectif"]);
@@ -209,13 +218,46 @@ function fillCompetenceFilter() {
     select.innerHTML += `<option value="${c}">${c}</option>`;
   });
 
+  select.onchange = function() {
+    fillObjectiveFilter();
+    render();
+  };
+}
+
+function fillObjectiveFilter() {
+  const select = document.getElementById("objectiveFilter");
+  const selectedCompetence = document.getElementById("competenceFilter").value;
+
+  let available = objectives;
+
+  if (selectedCompetence) {
+    available = objectives.filter(o => o.competence === selectedCompetence);
+  }
+
+  select.innerHTML = `<option value="">Tous les objectifs</option>`;
+
+  available.forEach(o => {
+    select.innerHTML += `<option value="${o.id}">${o.objectif}</option>`;
+  });
+
   select.onchange = render;
 }
 
 function getFilteredObjectives() {
-  const selected = document.getElementById("competenceFilter").value;
-  if (!selected) return objectives;
-  return objectives.filter(o => o.competence === selected);
+  const selectedCompetence = document.getElementById("competenceFilter").value;
+  const selectedObjective = document.getElementById("objectiveFilter").value;
+
+  let filtered = objectives;
+
+  if (selectedCompetence) {
+    filtered = filtered.filter(o => o.competence === selectedCompetence);
+  }
+
+  if (selectedObjective) {
+    filtered = filtered.filter(o => o.id === selectedObjective);
+  }
+
+  return filtered;
 }
 
 function render() {
@@ -280,18 +322,44 @@ function toggleOpen(id) {
 
 function pickRandomObjective() {
   const filtered = getFilteredObjectives();
-  if (filtered.length === 0) return;
+
+  if (filtered.length === 0) {
+    document.getElementById("randomSection").innerHTML = `
+      <div class="card">
+        Aucun objectif trouvé avec ces filtres.
+      </div>
+    `;
+    return;
+  }
 
   const obj = filtered[Math.floor(Math.random() * filtered.length)];
+
+  let randomSub = "";
+
+  if (obj.sousObjectifs.length > 0) {
+    randomSub = obj.sousObjectifs[Math.floor(Math.random() * obj.sousObjectifs.length)];
+  }
 
   document.getElementById("randomSection").innerHTML = `
     <div class="card">
       <h2>🎲 Objectif choisi</h2>
       <p><strong>Compétence :</strong> ${obj.competence}</p>
       <h3>${obj.objectif}</h3>
-      <ul>
-        ${obj.sousObjectifs.map(s => `<li>${s}</li>`).join("")}
-      </ul>
+
+      ${randomSub ? `
+        <p><strong>Sous-objectif suggéré :</strong></p>
+        <ul>
+          <li>${randomSub}</li>
+        </ul>
+      ` : ""}
+
+      <button onclick="toggleDone('${obj.id}')">
+        ${userData[obj.id]?.done ? "↩️ Décocher" : "✅ Marquer complété"}
+      </button>
+
+      <button class="secondary" onclick="toggleFav('${obj.id}')">
+        ${userData[obj.id]?.fav ? "⭐ Retirer favori" : "☆ Favori"}
+      </button>
     </div>
   `;
 }
