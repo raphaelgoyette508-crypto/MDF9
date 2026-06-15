@@ -30,16 +30,81 @@
     .progress-bar { background: #27ae60; color: white; text-align: center; padding: 6px; width: 0%; }
     .hidden { display: none; }
     .userbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    header h1 {
+  margin-bottom: 4px;
+}
+
+header h2 {
+  margin: 4px 0;
+  font-size: 22px;
+  font-weight: normal;
+}
+
+header p {
+  max-width: 900px;
+  margin: 8px auto 12px auto;
+}
+
+.help-button {
+  background: white;
+  color: #243b55;
+  font-weight: bold;
+}
+
+.help-box {
+  max-width: 1000px;
+  margin: 16px auto;
+  padding: 16px;
+  background: #eaf4ff;
+  border-left: 6px solid #2f80ed;
+  border-radius: 10px;
+}
     .error { color: #c0392b; font-weight: bold; }
   </style>
 </head>
 
 <body>
 <header>
-  <h1>🎯 Objectifs de résidence</h1>
-  <p>Médecine familiale — Université de Montréal</p>
+  <h1>MDF9</h1>
+  <h2>Outil de sélection d’un objectif de supervision</h2>
+  <p>Adapté des finalités d’apprentissage du cahier du programme de résidence en médecine de famille de l’Université de Montréal</p>
+  <button class="help-button" onclick="toggleHelp()">❓ Aide</button>
 </header>
 
+<section id="helpSection" class="help-box hidden">
+  <h2>Comment utiliser le générateur?</h2>
+
+  <p>
+    Avant votre supervision clinique, questionnez-vous à savoir quel objectif
+    d’apprentissage s’impose déjà selon vos cas cliniques ou selon votre parcours
+    de formation.
+  </p>
+
+  <p>
+    Si un objectif s’impose clairement, vous n’avez pas besoin de cet outil.
+  </p>
+
+  <p>
+    Dans le cas contraire, utilisez les filtres pour sélectionner une compétence
+    et/ou un objectif, puis appuyez sur le bouton
+    <strong>« Choisir au hasard »</strong>.
+  </p>
+
+  <p>
+    L’outil vous proposera un sous-objectif de supervision que vous pourrez ensuite
+    marquer comme complété, mettre en favori ou annoter avec vos notes personnelles.
+  </p>
+
+  <h3>Informations</h3>
+
+  <p>
+    À l’intention des résidents en médecine de famille. Tiré des finalités
+    d’apprentissage du cahier du programme de l’Université de Montréal, la liste
+    des objectifs CanMEDS a été bonifiée pour inclure les compétences transversales
+    pertinentes à la suite des travaux du comité de programme.
+  </p>
+</section>
+  
 <main>
   <section id="authSection" class="card">
     <h2>Connexion</h2>
@@ -456,6 +521,11 @@ window.pickRandomObjective = pickRandomObjective;
 window.toggleDone = toggleDone;
 window.toggleFav = toggleFav;
 window.saveNote = saveNote;
+function toggleHelp() {
+  document.getElementById("helpSection").classList.toggle("hidden");
+}
+
+window.toggleHelp = toggleHelp;
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
