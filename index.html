@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Objectifs Résidents</title>
+
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    .card { padding: 10px; border: 1px solid #ccc; margin: 10px 0; }
+    button { margin: 5px; }
+    .done { text-decoration: line-through; color: gray; }
+  </style>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+
+</head>
+
+<body>
+
+<h1>🎯 Objectifs de résidence</h1>
+
+<label>Filtrer catégorie :</label>
+<select id="categoryFilter"></select>
+
+<br><br>
+
+<button onclick="getRandomGoal()">🎲 Objectif aléatoire</button>
+
+<h2>Résultat</h2>
+<div id="randomResult"></div>
+
+<h2>Liste des objectifs</h2>
+<div id="list"></div>
+
+<script>
+const SHEET_URL = "COLLE_ICI_TON_LIEN_CSV";
+
+// état local utilisateur
+let userData = JSON.parse(localStorage.getItem("userData") || "{}");
+
+// charger données
+async function loadGoals() {
+  const res = await fetch(SHEET_URL);
+  const text = await res.text();
+
+  const rows = text.split("\n").slice(1);
+
+  const goals = rows.map(r => {
+    const [id, objectif, categorie, description] = r.split(",");
+    return { id, objectif, categorie, description };
+  });
+
+  window.goals = goals;
+  render();
+  fillCategories();
+}
+
+// catégories
+function fillCategories() {
+  const select = document.getElementById("categoryFilter");
+  const cats = [...new Set(goals.map(g => g.categorie))];
+
+  select.innerHTML = `<option value="">Toutes</option>`;
+  cats.forEach(c => {
+    select.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+
+  select.onchange = render;
+}
+
+// tirage aléatoire
+function getRandomGoal() {
+  const cat = document.getElementById("categoryFilter").value;
+
+  let filtered = goals;
+  if (cat) filtered = goals.filter(g => g.categorie === cat);
+
+  const random = filtered[Math.floor(Math.random() * filtered.length)];
+
+  document.getElementById("randomResult").innerHTML = `
+    <div class="card">
+      <h3>${random.objectif}</h3>
+      <p>${random.description}</p>
+
+      <button onclick="toggleDone('${random.id}')">
+        ${userData[random.id]?.done ? "❌ Décocher" : "✅ Marquer complété"}
+      </button>
+
+      <button onclick="toggleFav('${random.id}')">
+        ⭐ ${userData[random.id]?.fav ? "Retirer favori" : "Favori"}
+      </button>
+
+      <br><br>
+      <textarea placeholder="Notes..." onchange="saveNote('${random.id}', this.value)">
+        ${userData[random.id]?.note || ""}
+      </textarea>
+    </div>
+  `;
+}
+
+// liste complète
+function render() {
+  const cat = document.getElementById("categoryFilter").value;
+  let filtered = goals;
+
+  if (cat) filtered = goals.filter(g => g.categorie === cat);
+
+  document.getElementById("list").innerHTML = filtered.map(g => {
+    const state = userData[g.id] || {};
+
+    return `
+      <div class="card ${state.done ? "done" : ""}">
+        <h3>${g.objectif}</h3>
+        <p>${g.categorie}</p>
+
+        <button onclick="toggleDone('${g.id}')">
+          ${state.done ? "❌" : "✅"}
+        </button>
+
+        <button onclick="toggleFav('${g.id}')">
+          ${state.fav ? "⭐" : "☆"}
+        </button>
+
+        <textarea onchange="saveNote('${g.id}', this.value)">
+          ${state.note || ""}
+        </textarea>
+      </div>
+    `;
+  }).join("");
+}
+
+// sauvegarde locale
+function save() {
+  localStorage.setItem("userData", JSON.stringify(userData));
+}
+
+function toggleDone(id) {
+  userData[id] = userData[id] || {};
+  userData[id].done = !userData[id].done;
+  save();
+  render();
+  getRandomGoal();
+}
+
+function toggleFav(id) {
+  userData[id] = userData[id] || {};
+  userData[id].fav = !userData[id].fav;
+  save();
+  render();
+  getRandomGoal();
+}
+
+function saveNote(id, value) {
+  userData[id] = userData[id] || {};
+  userData[id].note = value;
+  save();
+}
+
+loadGoals();
+</script>
+
+</body>
+</html>
