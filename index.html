@@ -5,89 +5,32 @@
   <title>Objectifs de résidence</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="manifest" href="manifest.json" />
+
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f6f7fb; color: #222; }
     header { background: #243b55; color: white; padding: 18px; text-align: center; }
     main { padding: 16px; max-width: 1000px; margin: auto; }
-    select, button, textarea { font-size: 16px; padding: 8px; margin: 6px 0; max-width: 100%; }
+    input, select, button, textarea { font-size: 16px; padding: 8px; margin: 6px 0; max-width: 100%; }
     button { border: none; border-radius: 8px; background: #2f80ed; color: white; cursor: pointer; }
     button.secondary { background: #ddd; color: #222; }
-
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 14px;
-      margin: 12px 0;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    .competence-title {
-      font-size: 22px;
-      font-weight: bold;
-      margin-top: 25px;
-      color: #243b55;
-    }
-
-    .objective-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      cursor: pointer;
-    }
-
-    .objective-title {
-      font-weight: bold;
-      font-size: 18px;
-    }
-
-    .objective-count {
-      font-size: 14px;
-      color: #666;
-      margin-top: 6px;
-    }
-
-    .subobjectives {
-      display: none;
-      margin-top: 14px;
-    }
-
-    .subobjectives.open {
-      display: block;
-    }
-
-    .sub-card {
-      border-top: 1px solid #ddd;
-      padding: 12px 0;
-    }
-
-    .sub-card.done {
-      opacity: 0.55;
-      text-decoration: line-through;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 55px;
-      box-sizing: border-box;
-    }
-
-    .progress {
-      background: #ddd;
-      border-radius: 20px;
-      overflow: hidden;
-      margin: 10px 0;
-    }
-
-    .progress-bar {
-      background: #27ae60;
-      color: white;
-      text-align: center;
-      padding: 6px;
-      width: 0%;
-    }
+    button.danger { background: #c0392b; }
+    .card { background: white; border-radius: 12px; padding: 14px; margin: 12px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .competence-title { font-size: 22px; font-weight: bold; margin-top: 25px; color: #243b55; }
+    .objective-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; cursor: pointer; }
+    .objective-title { font-weight: bold; font-size: 18px; }
+    .objective-count { font-size: 14px; color: #666; margin-top: 6px; }
+    .subobjectives { display: none; margin-top: 14px; }
+    .subobjectives.open { display: block; }
+    .sub-card { border-top: 1px solid #ddd; padding: 12px 0; }
+    .sub-card.done { opacity: 0.55; text-decoration: line-through; }
+    textarea { width: 100%; min-height: 55px; box-sizing: border-box; }
+    .progress { background: #ddd; border-radius: 20px; overflow: hidden; margin: 10px 0; }
+    .progress-bar { background: #27ae60; color: white; text-align: center; padding: 6px; width: 0%; }
+    .hidden { display: none; }
+    .userbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .error { color: #c0392b; font-weight: bold; }
   </style>
 </head>
 
@@ -98,35 +41,89 @@
 </header>
 
 <main>
-  <label for="competenceFilter">Choisir une compétence :</label><br>
-  <select id="competenceFilter"></select>
+  <section id="authSection" class="card">
+    <h2>Connexion</h2>
 
-  <br><br>
+    <input id="emailInput" type="email" placeholder="Courriel" /><br>
+    <input id="passwordInput" type="password" placeholder="Mot de passe" /><br>
 
-  <label for="objectiveFilter">Choisir un objectif :</label><br>
-  <select id="objectiveFilter"></select>
+    <button onclick="login()">Se connecter</button>
+    <button class="secondary" onclick="signup()">Créer un compte</button>
 
-  <br><br>
+    <p id="authMessage" class="error"></p>
+  </section>
 
-  <button onclick="pickRandomObjective()">🎲 Choisir au hasard</button>
+  <section id="appSection" class="hidden">
+    <div class="card userbar">
+      <div>
+        Connecté : <strong id="userEmail"></strong>
+      </div>
+      <button class="danger" onclick="logout()">Déconnexion</button>
+    </div>
 
-  <section id="randomSection"></section>
+    <label for="competenceFilter">Choisir une compétence :</label><br>
+    <select id="competenceFilter"></select>
 
-  <h2>Progression</h2>
-  <div class="progress">
-    <div id="progressBar" class="progress-bar">0%</div>
-  </div>
+    <br><br>
 
-  <h2>Liste des objectifs</h2>
-  <section id="objectivesList"></section>
+    <label for="objectiveFilter">Choisir un objectif :</label><br>
+    <select id="objectiveFilter"></select>
+
+    <br><br>
+
+    <button onclick="pickRandomObjective()">🎲 Choisir au hasard</button>
+
+    <section id="randomSection"></section>
+
+    <h2>Progression</h2>
+    <div class="progress">
+      <div id="progressBar" class="progress-bar">0%</div>
+    </div>
+
+    <h2>Liste des objectifs</h2>
+    <section id="objectivesList"></section>
+  </section>
 </main>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA_Kh91XBu5IInWE03tHSISTfPdoUhShLo",
+  authDomain: "mdf9-4a809.firebaseapp.com",
+  projectId: "mdf9-4a809",
+  storageBucket: "mdf9-4a809.firebasestorage.app",
+  messagingSenderId: "1029587068404",
+  appId: "1:1029587068404:web:8e5ca9f12f4b083ff6c5a1",
+  measurementId: "G-YZ59X0NGZ5"
+};
+
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQDCL9tTMx5HD5RtxDHz_Pfm1ZS_0CNsiiSg5Z9jhtX0kdKO2AlK7Ib1wJOF9Q5Xw/pub?output=csv";
 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
 let rawRows = [];
 let objectives = [];
-let userData = JSON.parse(localStorage.getItem("userData") || "{}");
+let userData = {};
+let openObjectives = new Set();
 
 function clean(value) {
   return String(value || "").trim();
@@ -134,6 +131,68 @@ function clean(value) {
 
 function makeId(text) {
   return text.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+}
+
+async function signup() {
+  const email = document.getElementById("emailInput").value;
+  const password = document.getElementById("passwordInput").value;
+
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+    document.getElementById("authMessage").textContent = "";
+  } catch (error) {
+    document.getElementById("authMessage").textContent = error.message;
+  }
+}
+
+async function login() {
+  const email = document.getElementById("emailInput").value;
+  const password = document.getElementById("passwordInput").value;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    document.getElementById("authMessage").textContent = "";
+  } catch (error) {
+    document.getElementById("authMessage").textContent = error.message;
+  }
+}
+
+async function logout() {
+  await signOut(auth);
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUser = user;
+
+    document.getElementById("authSection").classList.add("hidden");
+    document.getElementById("appSection").classList.remove("hidden");
+    document.getElementById("userEmail").textContent = user.email;
+
+    await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
+      lastLogin: new Date().toISOString()
+    }, { merge: true });
+
+    await loadUserData();
+    loadData();
+  } else {
+    currentUser = null;
+    userData = {};
+
+    document.getElementById("authSection").classList.remove("hidden");
+    document.getElementById("appSection").classList.add("hidden");
+  }
+});
+
+async function loadUserData() {
+  userData = {};
+
+  const snapshot = await getDocs(collection(db, "users", currentUser.uid, "subObjectives"));
+
+  snapshot.forEach(docSnap => {
+    userData[docSnap.id] = docSnap.data();
+  });
 }
 
 function loadData() {
@@ -255,6 +314,7 @@ function render() {
     grouped[comp].forEach(obj => {
       const doneCount = obj.sousObjectifs.filter(sub => userData[sub.id]?.done).length;
       const totalCount = obj.sousObjectifs.length;
+      const isOpen = openObjectives.has(obj.id);
 
       list.innerHTML += `
         <div class="card">
@@ -263,10 +323,10 @@ function render() {
               <div class="objective-title">${obj.objectif}</div>
               <div class="objective-count">${doneCount}/${totalCount} sous-objectifs complétés</div>
             </div>
-            <div id="arrow-${obj.id}">⬇️</div>
+            <div id="arrow-${obj.id}">${isOpen ? "⬆️" : "⬇️"}</div>
           </div>
 
-          <div id="sub-${obj.id}" class="subobjectives">
+          <div id="sub-${obj.id}" class="subobjectives ${isOpen ? "open" : ""}">
             ${obj.sousObjectifs.map(sub => {
               const state = userData[sub.id] || {};
 
@@ -300,16 +360,13 @@ function render() {
 }
 
 function toggleOpen(id) {
-  const section = document.getElementById("sub-" + id);
-  const arrow = document.getElementById("arrow-" + id);
-
-  section.classList.toggle("open");
-
-  if (section.classList.contains("open")) {
-    arrow.textContent = "⬆️";
+  if (openObjectives.has(id)) {
+    openObjectives.delete(id);
   } else {
-    arrow.textContent = "⬇️";
+    openObjectives.add(id);
   }
+
+  render();
 }
 
 function pickRandomObjective() {
@@ -344,28 +401,40 @@ function pickRandomObjective() {
   `;
 }
 
-function toggleDone(id) {
+async function toggleDone(id) {
   userData[id] = userData[id] || {};
   userData[id].done = !userData[id].done;
-  saveUserData();
+  userData[id].updatedAt = new Date().toISOString();
+
+  await saveSubObjective(id);
   render();
 }
 
-function toggleFav(id) {
+async function toggleFav(id) {
   userData[id] = userData[id] || {};
   userData[id].fav = !userData[id].fav;
-  saveUserData();
+  userData[id].updatedAt = new Date().toISOString();
+
+  await saveSubObjective(id);
   render();
 }
 
-function saveNote(id, note) {
+async function saveNote(id, note) {
   userData[id] = userData[id] || {};
   userData[id].note = note;
-  saveUserData();
+  userData[id].updatedAt = new Date().toISOString();
+
+  await saveSubObjective(id);
 }
 
-function saveUserData() {
-  localStorage.setItem("userData", JSON.stringify(userData));
+async function saveSubObjective(id) {
+  if (!currentUser) return;
+
+  await setDoc(
+    doc(db, "users", currentUser.uid, "subObjectives", id),
+    userData[id],
+    { merge: true }
+  );
 }
 
 function updateProgress() {
@@ -379,11 +448,18 @@ function updateProgress() {
   bar.textContent = percent + "%";
 }
 
+window.signup = signup;
+window.login = login;
+window.logout = logout;
+window.toggleOpen = toggleOpen;
+window.pickRandomObjective = pickRandomObjective;
+window.toggleDone = toggleDone;
+window.toggleFav = toggleFav;
+window.saveNote = saveNote;
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }
-
-loadData();
 </script>
 </body>
 </html>
