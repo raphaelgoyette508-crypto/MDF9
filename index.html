@@ -152,7 +152,8 @@ header p {
 <button onclick="pickRandomObjective()">
   🎲 Choisir au hasard
 </button>
-
+<div id="remainingCount" style="margin-top:10px; font-weight:bold; color:#243b55;"></div>
+    
     <section id="randomSection"></section>
 
     <h2>Progression</h2>
@@ -450,86 +451,32 @@ function toggleOpen(id) {
 }
 
 function pickRandomObjective() {
-
-  <div id="remainingCount" style="
-  margin-top:10px;
-  font-weight:bold;
-  color:#243b55;
-">
-</div>
-  
   const mode = document.getElementById("randomMode").value;
-
   let candidates = [];
 
   getFilteredObjectives().forEach(obj => {
-
     obj.sousObjectifs.forEach(sub => {
-
       const state = userData[sub.id] || {};
 
-      if (mode === "todo" && state.done) {
-        return;
-      }
+      if (mode === "todo" && state.done) return;
+      if (mode === "favorites" && (!state.fav || state.done)) return;
 
-      if (mode === "favorites" && (!state.fav || state.done)) {
-        return;
-      }
-
-      candidates.push({
-        obj,
-        sub
-      });
-
+      candidates.push({ obj, sub });
     });
-
   });
 
   if (candidates.length === 0) {
-
     document.getElementById("randomSection").innerHTML = `
       <div class="card">
         <h3>Aucun sous-objectif disponible</h3>
       </div>
     `;
-
     return;
   }
 
-  const choice =
-    candidates[Math.floor(Math.random() * candidates.length)];
-
+  const choice = candidates[Math.floor(Math.random() * candidates.length)];
   const obj = choice.obj;
   const sub = choice.sub;
-
-  const state = userData[sub.id] || {};
-
-  document.getElementById("randomSection").innerHTML = `
-    <div class="card">
-
-      <h2>🎲 Sous-objectif choisi</h2>
-
-      <p><strong>Compétence :</strong> ${obj.competence}</p>
-
-      <h3>${obj.objectif}</h3>
-
-      <p>${sub.text}</p>
-
-      <button onclick="toggleDone('${sub.id}')">
-        ${state.done ? "↩️ Décocher" : "✅ Complété"}
-      </button>
-
-      <button class="secondary"
-        onclick="toggleFav('${sub.id}')">
-        ${state.fav ? "⭐ Favori" : "☆ Favori"}
-      </button>
-
-    </div>
-  `;
-}
-
-  const obj = filtered[Math.floor(Math.random() * filtered.length)];
-  const sub = obj.sousObjectifs[Math.floor(Math.random() * obj.sousObjectifs.length)];
   const state = userData[sub.id] || {};
 
   document.getElementById("randomSection").innerHTML = `
