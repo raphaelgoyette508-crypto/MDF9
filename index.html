@@ -14,14 +14,80 @@
     select, button, textarea { font-size: 16px; padding: 8px; margin: 6px 0; max-width: 100%; }
     button { border: none; border-radius: 8px; background: #2f80ed; color: white; cursor: pointer; }
     button.secondary { background: #ddd; color: #222; }
-    .card { background: white; border-radius: 12px; padding: 14px; margin: 12px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .competence-title { font-size: 22px; font-weight: bold; margin-top: 25px; color: #243b55; }
-    .objective-title { font-weight: bold; font-size: 18px; margin-bottom: 12px; }
-    .sub-card { border-top: 1px solid #ddd; padding: 10px 0; }
-    .sub-card.done { opacity: 0.55; text-decoration: line-through; }
-    textarea { width: 100%; min-height: 55px; box-sizing: border-box; }
-    .progress { background: #ddd; border-radius: 20px; overflow: hidden; margin: 10px 0; }
-    .progress-bar { background: #27ae60; color: white; text-align: center; padding: 6px; width: 0%; }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 14px;
+      margin: 12px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .competence-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-top: 25px;
+      color: #243b55;
+    }
+
+    .objective-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .objective-title {
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .objective-count {
+      font-size: 14px;
+      color: #666;
+      margin-top: 6px;
+    }
+
+    .subobjectives {
+      display: none;
+      margin-top: 14px;
+    }
+
+    .subobjectives.open {
+      display: block;
+    }
+
+    .sub-card {
+      border-top: 1px solid #ddd;
+      padding: 12px 0;
+    }
+
+    .sub-card.done {
+      opacity: 0.55;
+      text-decoration: line-through;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 55px;
+      box-sizing: border-box;
+    }
+
+    .progress {
+      background: #ddd;
+      border-radius: 20px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-bar {
+      background: #27ae60;
+      color: white;
+      text-align: center;
+      padding: 6px;
+      width: 0%;
+    }
   </style>
 </head>
 
@@ -187,32 +253,44 @@ function render() {
     list.innerHTML += `<div class="competence-title">${comp}</div>`;
 
     grouped[comp].forEach(obj => {
+      const doneCount = obj.sousObjectifs.filter(sub => userData[sub.id]?.done).length;
+      const totalCount = obj.sousObjectifs.length;
+
       list.innerHTML += `
         <div class="card">
-          <div class="objective-title">${obj.objectif}</div>
+          <div class="objective-header" onclick="toggleOpen('${obj.id}')">
+            <div>
+              <div class="objective-title">${obj.objectif}</div>
+              <div class="objective-count">${doneCount}/${totalCount} sous-objectifs complétés</div>
+            </div>
+            <div id="arrow-${obj.id}">⬇️</div>
+          </div>
 
-          ${obj.sousObjectifs.map(sub => {
-            const state = userData[sub.id] || {};
+          <div id="sub-${obj.id}" class="subobjectives">
+            ${obj.sousObjectifs.map(sub => {
+              const state = userData[sub.id] || {};
 
-            return `
-              <div class="sub-card ${state.done ? "done" : ""}">
-                <p>${sub.text}</p>
+              return `
+                <div class="sub-card ${state.done ? "done" : ""}">
+                  <p>${sub.text}</p>
 
-                <button onclick="toggleDone('${sub.id}')">
-                  ${state.done ? "↩️ Décocher" : "✅ Complété"}
-                </button>
+                  <button onclick="event.stopPropagation(); toggleDone('${sub.id}')">
+                    ${state.done ? "↩️ Décocher" : "✅ Complété"}
+                  </button>
 
-                <button class="secondary" onclick="toggleFav('${sub.id}')">
-                  ${state.fav ? "⭐ Favori" : "☆ Favori"}
-                </button>
+                  <button class="secondary" onclick="event.stopPropagation(); toggleFav('${sub.id}')">
+                    ${state.fav ? "⭐ Favori" : "☆ Favori"}
+                  </button>
 
-                <textarea
-                  placeholder="Notes personnelles..."
-                  onchange="saveNote('${sub.id}', this.value)"
-                >${state.note || ""}</textarea>
-              </div>
-            `;
-          }).join("")}
+                  <textarea
+                    placeholder="Notes personnelles..."
+                    onclick="event.stopPropagation()"
+                    onchange="saveNote('${sub.id}', this.value)"
+                  >${state.note || ""}</textarea>
+                </div>
+              `;
+            }).join("")}
+          </div>
         </div>
       `;
     });
@@ -221,9 +299,28 @@ function render() {
   updateProgress();
 }
 
+function toggleOpen(id) {
+  const section = document.getElementById("sub-" + id);
+  const arrow = document.getElementById("arrow-" + id);
+
+  section.classList.toggle("open");
+
+  if (section.classList.contains("open")) {
+    arrow.textContent = "⬆️";
+  } else {
+    arrow.textContent = "⬇️";
+  }
+}
+
 function pickRandomObjective() {
   const filtered = getFilteredObjectives();
-  if (filtered.length === 0) return;
+
+  if (filtered.length === 0) {
+    document.getElementById("randomSection").innerHTML = `
+      <div class="card">Aucun objectif trouvé avec ces filtres.</div>
+    `;
+    return;
+  }
 
   const obj = filtered[Math.floor(Math.random() * filtered.length)];
   const sub = obj.sousObjectifs[Math.floor(Math.random() * obj.sousObjectifs.length)];
