@@ -1,169 +1,340 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Objectifs Résidents</title>
+  <meta charset="UTF-8" />
+  <title>Objectifs de résidence</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="manifest" href="manifest.json" />
 
-  <link rel="manifest" href="manifest.json">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <style>
-    body { font-family: sans-serif; margin: 20px; }
-    .card { padding: 10px; border: 1px solid #ccc; margin: 10px 0; }
-    button { margin: 5px; }
-    .done { text-decoration: line-through; color: gray; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f6f7fb;
+      color: #222;
+    }
+
+    header {
+      background: #243b55;
+      color: white;
+      padding: 18px;
+      text-align: center;
+    }
+
+    main {
+      padding: 16px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    select, button, textarea {
+      font-size: 16px;
+      padding: 8px;
+      margin: 6px 0;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      background: #2f80ed;
+      color: white;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #ddd;
+      color: #222;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 14px;
+      margin: 12px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .competence-title {
+      font-size: 22px;
+      font-weight: bold;
+      margin-top: 25px;
+      color: #243b55;
+    }
+
+    .objective-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .objective-title {
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .subobjectives {
+      display: none;
+      margin-top: 12px;
+      padding-left: 18px;
+    }
+
+    .subobjectives.open {
+      display: block;
+    }
+
+    .subobjectives li {
+      margin-bottom: 8px;
+    }
+
+    .done {
+      opacity: 0.55;
+      text-decoration: line-through;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 60px;
+      box-sizing: border-box;
+    }
+
+    .progress {
+      background: #ddd;
+      border-radius: 20px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-bar {
+      background: #27ae60;
+      color: white;
+      text-align: center;
+      padding: 6px;
+      width: 0%;
+    }
   </style>
-
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
-}
-</script>
-
 </head>
 
 <body>
+<header>
+  <h1>🎯 Objectifs de résidence</h1>
+  <p>Médecine familiale — Université de Montréal</p>
+</header>
 
-<h1>🎯 Objectifs de résidence</h1>
+<main>
+  <label for="competenceFilter">Filtrer par compétence :</label><br>
+  <select id="competenceFilter">
+    <option value="">Toutes les compétences</option>
+  </select>
 
-<label>Filtrer catégorie :</label>
-<select id="categoryFilter"></select>
+  <br><br>
 
-<br><br>
+  <button onclick="pickRandomObjective()">🎲 Choisir un objectif au hasard</button>
 
-<button onclick="getRandomGoal()">🎲 Objectif aléatoire</button>
+  <section id="randomSection"></section>
 
-<h2>Résultat</h2>
-<div id="randomResult"></div>
+  <h2>Progression</h2>
+  <div class="progress">
+    <div id="progressBar" class="progress-bar">0%</div>
+  </div>
 
-<h2>Liste des objectifs</h2>
-<div id="list"></div>
+  <h2>Liste des objectifs</h2>
+  <section id="objectivesList"></section>
+</main>
 
 <script>
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQDCL9tTMx5HD5RtxDHz_Pfm1ZS_0CNsiiSg5Z9jhtX0kdKO2AlK7Ib1wJOF9Q5Xw/pub?output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQDCL9tTMx5HD5RtxDHz_Pfm1ZS_0CNsiiSg5Z9jhtX0kdKO2AlK7Ib1wJOF9Q5Xw/pubhtml";
 
-// état local utilisateur
+let rawRows = [];
+let objectives = [];
 let userData = JSON.parse(localStorage.getItem("userData") || "{}");
 
-// charger données
-async function loadGoals() {
-  const res = await fetch(SHEET_URL);
-  const text = await res.text();
-
-  const rows = text.split("\n").slice(1);
-
-  const goals = rows.map(r => {
-    const [id, objectif, categorie, description] = r.split(",");
-    return { id, objectif, categorie, description };
+async function loadData() {
+  Papa.parse(SHEET_URL, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      rawRows = results.data;
+      buildObjectives();
+      fillCompetenceFilter();
+      render();
+    }
   });
-
-  window.goals = goals;
-  render();
-  fillCategories();
 }
 
-// catégories
-function fillCategories() {
-  const select = document.getElementById("categoryFilter");
-  const cats = [...new Set(goals.map(g => g.categorie))];
+function buildObjectives() {
+  const map = {};
 
-  select.innerHTML = `<option value="">Toutes</option>`;
-  cats.forEach(c => {
+  rawRows.forEach((row, index) => {
+    const competence = clean(row["Compétence"] || row["Competence"]);
+    const objectif = clean(row["Objectif"]);
+    const sousObjectif = clean(row["Sous-objectif"] || row["Sous objectif"] || row["SousObjectif"]);
+
+    if (!objectif) return;
+
+    const id = objectif.toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+
+    if (!map[id]) {
+      map[id] = {
+        id,
+        competence,
+        objectif,
+        sousObjectifs: []
+      };
+    }
+
+    if (sousObjectif) {
+      map[id].sousObjectifs.push(sousObjectif);
+    }
+  });
+
+  objectives = Object.values(map);
+}
+
+function clean(value) {
+  return String(value || "").trim();
+}
+
+function fillCompetenceFilter() {
+  const select = document.getElementById("competenceFilter");
+  const competences = [...new Set(objectives.map(o => o.competence).filter(Boolean))];
+
+  select.innerHTML = `<option value="">Toutes les compétences</option>`;
+
+  competences.forEach(c => {
     select.innerHTML += `<option value="${c}">${c}</option>`;
   });
 
   select.onchange = render;
 }
 
-// tirage aléatoire
-function getRandomGoal() {
-  const cat = document.getElementById("categoryFilter").value;
+function getFilteredObjectives() {
+  const selected = document.getElementById("competenceFilter").value;
+  if (!selected) return objectives;
+  return objectives.filter(o => o.competence === selected);
+}
 
-  let filtered = goals;
-  if (cat) filtered = goals.filter(g => g.categorie === cat);
+function render() {
+  const list = document.getElementById("objectivesList");
+  const filtered = getFilteredObjectives();
 
-  const random = filtered[Math.floor(Math.random() * filtered.length)];
+  list.innerHTML = "";
 
-  document.getElementById("randomResult").innerHTML = `
+  const grouped = {};
+
+  filtered.forEach(obj => {
+    const comp = obj.competence || "Sans compétence";
+    if (!grouped[comp]) grouped[comp] = [];
+    grouped[comp].push(obj);
+  });
+
+  Object.keys(grouped).forEach(comp => {
+    list.innerHTML += `<div class="competence-title">${comp}</div>`;
+
+    grouped[comp].forEach(obj => {
+      const state = userData[obj.id] || {};
+
+      list.innerHTML += `
+        <div class="card ${state.done ? "done" : ""}">
+          <div class="objective-header" onclick="toggleOpen('${obj.id}')">
+            <div class="objective-title">${obj.objectif}</div>
+            <div>⬇️</div>
+          </div>
+
+          <div id="sub-${obj.id}" class="subobjectives">
+            <ul>
+              ${obj.sousObjectifs.map(s => `<li>${s}</li>`).join("")}
+            </ul>
+
+            <button onclick="event.stopPropagation(); toggleDone('${obj.id}')">
+              ${state.done ? "↩️ Décocher" : "✅ Complété"}
+            </button>
+
+            <button class="secondary" onclick="event.stopPropagation(); toggleFav('${obj.id}')">
+              ${state.fav ? "⭐ Favori" : "☆ Favori"}
+            </button>
+
+            <br><br>
+
+            <textarea 
+              placeholder="Notes personnelles..."
+              onclick="event.stopPropagation()"
+              onchange="saveNote('${obj.id}', this.value)"
+            >${state.note || ""}</textarea>
+          </div>
+        </div>
+      `;
+    });
+  });
+
+  updateProgress();
+}
+
+function toggleOpen(id) {
+  document.getElementById("sub-" + id).classList.toggle("open");
+}
+
+function pickRandomObjective() {
+  const filtered = getFilteredObjectives();
+  if (filtered.length === 0) return;
+
+  const obj = filtered[Math.floor(Math.random() * filtered.length)];
+
+  document.getElementById("randomSection").innerHTML = `
     <div class="card">
-      <h3>${random.objectif}</h3>
-      <p>${random.description}</p>
-
-      <button onclick="toggleDone('${random.id}')">
-        ${userData[random.id]?.done ? "❌ Décocher" : "✅ Marquer complété"}
-      </button>
-
-      <button onclick="toggleFav('${random.id}')">
-        ⭐ ${userData[random.id]?.fav ? "Retirer favori" : "Favori"}
-      </button>
-
-      <br><br>
-      <textarea placeholder="Notes..." onchange="saveNote('${random.id}', this.value)">
-        ${userData[random.id]?.note || ""}
-      </textarea>
+      <h2>🎲 Objectif choisi</h2>
+      <p><strong>Compétence :</strong> ${obj.competence}</p>
+      <h3>${obj.objectif}</h3>
+      <ul>
+        ${obj.sousObjectifs.map(s => `<li>${s}</li>`).join("")}
+      </ul>
     </div>
   `;
-}
-
-// liste complète
-function render() {
-  const cat = document.getElementById("categoryFilter").value;
-  let filtered = goals;
-
-  if (cat) filtered = goals.filter(g => g.categorie === cat);
-
-  document.getElementById("list").innerHTML = filtered.map(g => {
-    const state = userData[g.id] || {};
-
-    return `
-      <div class="card ${state.done ? "done" : ""}">
-        <h3>${g.objectif}</h3>
-        <p>${g.categorie}</p>
-
-        <button onclick="toggleDone('${g.id}')">
-          ${state.done ? "❌" : "✅"}
-        </button>
-
-        <button onclick="toggleFav('${g.id}')">
-          ${state.fav ? "⭐" : "☆"}
-        </button>
-
-        <textarea onchange="saveNote('${g.id}', this.value)">
-          ${state.note || ""}
-        </textarea>
-      </div>
-    `;
-  }).join("");
-}
-
-// sauvegarde locale
-function save() {
-  localStorage.setItem("userData", JSON.stringify(userData));
 }
 
 function toggleDone(id) {
   userData[id] = userData[id] || {};
   userData[id].done = !userData[id].done;
-  save();
+  saveUserData();
   render();
-  getRandomGoal();
 }
 
 function toggleFav(id) {
   userData[id] = userData[id] || {};
   userData[id].fav = !userData[id].fav;
-  save();
+  saveUserData();
   render();
-  getRandomGoal();
 }
 
-function saveNote(id, value) {
+function saveNote(id, note) {
   userData[id] = userData[id] || {};
-  userData[id].note = value;
-  save();
+  userData[id].note = note;
+  saveUserData();
 }
 
-loadGoals();
-</script>
+function saveUserData() {
+  localStorage.setItem("userData", JSON.stringify(userData));
+}
 
+function updateProgress() {
+  const total = objectives.length;
+  const done = objectives.filter(o => userData[o.id]?.done).length;
+  const percent = total ? Math.round((done / total) * 100) : 0;
+
+  const bar = document.getElementById("progressBar");
+  bar.style.width = percent + "%";
+  bar.textContent = percent + "%";
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+
+loadData();
+</script>
 </body>
 </html>
